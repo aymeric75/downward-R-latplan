@@ -4,16 +4,7 @@
 This is the grounder of Fast-Downward. 
 Below information are inherited by the original repository, kept here to give the right credit to the vast amount of work done on this amazing planning system.
 
-Yet, this repository focuses on the grounding mechanism used by Fast-Downward.
-
-The grounder is tested with a plain installation of python3.8; though it can work with other versions, too.
-
-To run the grounder you need to type the following:
-
-'python translate/translate.py domain problem' 
-
-where domain and problem are two filenames representing the PDDL description of the domain and the problem.
-
+TO UPDATE
 
 ## Contributors
 
