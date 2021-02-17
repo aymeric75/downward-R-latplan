@@ -1,7 +1,7 @@
 import sys
 
-import graph
-import pddl
+from .. import pddl
+from .. import graph
 
 
 def parse_typed_list(alist, only_variables=False,
@@ -95,6 +95,51 @@ def parse_condition_aux(alist, negated, type_dict, predicate_dict):
         return pddl.UniversalCondition(parameters, parts)
     elif tag == "exists" and not negated or tag == "forall" and negated:
         return pddl.ExistentialCondition(parameters, parts)
+
+'''NEW'''
+def parse_constraints(alist, type_dict, predicate_dict):
+    condition = parse_constraints_aux(alist, type_dict, predicate_dict)
+    return condition.uniquify_variables({}).simplified()
+
+'''NEW'''
+def parse_constraints_aux(alist, type_dict, predicate_dict):
+    """Parse a PDDL constraint"""
+    tag = alist[0]
+    #TODO constraint AT END
+    assert tag in ("and", "forall", "always", "at-most-once", "sometime", "sometime-before", "sometime-after")
+    if tag == "and":
+        args = alist[1:]
+    elif tag == "forall":
+        parameters = parse_typed_list(alist[1])
+        args = alist[2:]
+        assert len(args) == 1
+    else:
+        args = alist[1:]
+        condition = parse_condition_aux(args[0], False, type_dict, predicate_dict)
+        if tag == "always":
+            assert len(args) == 1
+            return pddl.Always(condition)
+        elif tag == "at-most-once":
+            assert len(args) == 1
+            return pddl.AtMostOnce(condition)
+        elif tag == "sometime":
+            assert len(args) == 1
+            return pddl.Sometime(condition)
+        elif tag == "sometime-before":
+            assert len(args) == 2
+            condition2 = parse_condition_aux(args[1], False, type_dict, predicate_dict)
+            return pddl.SometimeBefore(condition, condition2)
+        elif tag == "sometime-after":
+            assert len(args) == 2
+            condition2 = parse_condition_aux(args[1], False, type_dict, predicate_dict)
+            return pddl.SometimeAfter(condition, condition2)
+
+    parts = [parse_constraints_aux(part, type_dict, predicate_dict) for part in args]
+
+    if tag == "and":
+        return pddl.Conjunction(parts)
+    elif tag == "forall":
+        return pddl.UniversalCondition(parameters, parts)
 
 
 def parse_literal(alist, type_dict, predicate_dict, negated=False):
@@ -295,7 +340,7 @@ def parse_axiom(alist, type_dict, predicate_dict):
 def parse_task(domain_pddl, task_pddl):
     domain_name, domain_requirements, types, type_dict, constants, predicates, predicate_dict, functions, actions, axioms \
                  = parse_domain_pddl(domain_pddl)
-    task_name, task_domain_name, task_requirements, objects, init, goal, use_metric = parse_task_pddl(task_pddl, type_dict, predicate_dict)
+    task_name, task_domain_name, task_requirements, objects, init, goal, constraints, use_metric = parse_task_pddl(task_pddl, type_dict, predicate_dict)
 
     assert domain_name == task_domain_name
     requirements = pddl.Requirements(sorted(set(
@@ -309,8 +354,8 @@ def parse_task(domain_pddl, task_pddl):
     init += [pddl.Atom("=", (obj.name, obj.name)) for obj in objects]
 
     return pddl.Task(
-        domain_name, task_name, requirements, types, objects,
-        predicates, functions, init, goal, actions, axioms, use_metric)
+        '', task_name, requirements, types, objects,
+        predicates, functions, init, goal, actions, axioms, use_metric, constraints)
 
 
 def parse_domain_pddl(domain_pddl):
@@ -463,13 +508,20 @@ def parse_task_pddl(task_pddl, type_dict, predicate_dict):
     assert goal[0] == ":goal" and len(goal) == 2
     yield parse_condition(goal[1], type_dict, predicate_dict)
 
+    '''NEW'''
+    constraints = None
     use_metric = False
     for entry in iterator:
-        if entry[0] == ":metric":
+        if entry[0] == ":constraints":
+            assert len(entry) == 2
+            to_parse = entry[1]
+            constraints = parse_constraints(to_parse, type_dict, predicate_dict)
+        elif entry[0] == ":metric":
             if entry[1] == "minimize" and entry[2][0] == "total-cost":
                 use_metric = True
             else:
                 assert False, "Unknown metric."
+    yield constraints
     yield use_metric
 
     for entry in iterator:
