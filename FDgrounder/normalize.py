@@ -2,7 +2,11 @@
 
 import copy
 
-import pddl
+from . import pddl
+
+'''NEW'''
+from . import hard_constraints_manager
+'''NEW'''
 
 class ConditionProxy:
     def clone_owner(self):
@@ -325,6 +329,9 @@ def substitute_complicated_goal(task):
 # that the task makes sense.
 
 def normalize(task):
+    '''NEW'''
+    hard_constraints_manager.hard_constraints_preprocessing(task)
+    '''NEW'''
     remove_universal_quantifiers(task)
     substitute_complicated_goal(task)
     build_DNF(task)
@@ -335,6 +342,7 @@ def normalize(task):
     eliminate_existential_quantifiers_from_conditional_effects(task)
 
     verify_axiom_predicates(task)
+
 
 def verify_axiom_predicates(task):
     # Verify that derived predicates are not used in :init or

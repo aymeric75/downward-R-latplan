@@ -30,6 +30,9 @@ import timers
 import tools
 import variable_order
 
+'''NEW'''
+import hard_constraints_extension_action_ver
+
 # TODO: The translator may generate trivial derived variables which are always
 # true, for example if there ia a derived predicate in the input that only
 # depends on (non-derived) variables which are detected as always true.
@@ -682,6 +685,7 @@ def instantiate_dump(task):
     with timers.timing("Instantiating", block=True):
         (relaxed_reachable, atoms, actions, axioms,
          reachable_action_params) = instantiate.explore(task)
+        #hard_constraints_extension.remove_all_axioms(task, atoms, actions, axioms)
         print("goal relaxed reachable: %s" % relaxed_reachable)
         print("%d atoms:" % len(atoms))
         for atom in atoms:
@@ -695,6 +699,18 @@ def instantiate_dump(task):
         for axiom in axioms:
             axiom.dump()
             print()
+
+
+def instantiate_hard_constr(task):
+    (relaxed_reachable, atoms, actions, axioms,
+     reachable_action_params) = instantiate.explore(task)
+    groundedConstraintsTask = hard_constraints_extension_action_ver.GroundedConstraintsTask(task, atoms, actions, axioms)
+    domain_str = groundedConstraintsTask.domain2str()
+    problem_str = groundedConstraintsTask.problem2str()
+    with open('../test/output/compiled_dom.pddl', 'w') as out_dom:
+        out_dom.write(domain_str)
+    with open('../test/output/compiled_prob.pddl', 'w') as out_prob:
+        out_prob.write(problem_str)
 
 
 def main():
@@ -713,7 +729,8 @@ def main():
                 if effect.literal.negated:
                     del action.effects[index]
 
-    instantiate_dump(task)
+    #instantiate_dump(task)
+    instantiate_hard_constr(task)
     print("Done! %s" % timer)
 
 
