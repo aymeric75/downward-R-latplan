@@ -415,7 +415,7 @@ class ConstraintsNormalizer:
         action_name = NEW_ACTION_TEMPLATE.format(self.new_action_counter)
         atom = pddl.Atom(atom_predicate, atom_arguments)
         effect = pddl.Effect([], pddl.Truth(), atom)
-        action = pddl.Action(action_name, parameters, len(parameters), preconditions, [effect], 1)
+        action = pddl.Action(action_name, parameters, len(parameters), preconditions, [effect], None)
         self.new_action_counter += 1
         self.new_actions.append(action)
         return atom
