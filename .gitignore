@@ -9,3 +9,5 @@ __pycache__/
 /misc/autodoc/downward-xmlrpc.secret
 /.idea/
 /.vscode/
+/build/
+*.egg-info/
