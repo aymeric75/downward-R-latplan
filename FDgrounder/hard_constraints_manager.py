@@ -364,12 +364,22 @@ class ConstraintsNormalizer:
             self.constraints2actions()
 
     def normalize(self, constraints_formula, parameters):
+        '''
+        This function is used to normalize the constraints. The normal form of the constraint is "[universal quantifier] constraint"
+        Example: 
+            In PDDL we can write forall ?x . constraint1(x) and constraint2(x)
+            After calling this function, we will get the two constraints:
+                            
+                                forall ?x . constraint1(x), forall ?x . constraint2(x)
+
+        This is done by recursively storing the parameters of the universal conditions that different constraint shares 
+        '''
         if isinstance(constraints_formula, pddl.Conjunction):
             for conjunct in constraints_formula.parts:
                 self.normalize(conjunct, parameters)
         elif isinstance(constraints_formula, pddl.UniversalCondition):
-            if DEBUG:
-                self.check_disjoint_paramters(parameters, constraints_formula.parameters)
+            #if DEBUG:
+            self.check_disjoint_paramters(parameters, constraints_formula.parameters)
             self.normalize(constraints_formula.parts[0], parameters + constraints_formula.parameters)
         elif isinstance(constraints_formula, pddl.constraints.HardConstraint):
             self.store(constraints_formula, parameters)
@@ -383,9 +393,14 @@ class ConstraintsNormalizer:
             self.constraint_list.append(pddl.UniversalCondition(parameters, [constraints_formula]))
 
     def check_disjoint_paramters(self, p1, p2):
+        '''
+        Check if a forall has a parameter that is equal to another parameter specified in a outer forall.
+        Example: forall ?x (... forall ?x)
+        Since we have uniquified the parameters, this should never happen
+        '''
         intersection = set(p1).intersection(set(p2))
         if len(intersection) > 0:
-            print(NON_DISJOINT_PARAMETER_SET_MSG)
+            raise Exception(NON_DISJOINT_PARAMETER_SET_MSG)
 
     def constraints2actions(self):
         type_to_objects = instantiate.get_objects_by_type(self.objects, self.types)
