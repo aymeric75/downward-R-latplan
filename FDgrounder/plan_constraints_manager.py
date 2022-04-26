@@ -8,7 +8,6 @@ NUM = 'num'
 CONSTRAINTS = 'constraints'
 NEW_ACTION_TEMPLATE = 'constraint@{}'
 NEW_ATOM_TEMPLATE = 'constraint-reachable@{}'
-VERBOSE = False
 SPLIT_ALWAYS = True
 
 
@@ -33,11 +32,15 @@ def get_constraint_action_keys(action):
     return eff.predicate, "%s(%s)" % (eff.predicate, ", ".join(map(str, eff.args)))
 
 
-class AlwaysError(Exception):
-    pass
+#class AlwaysError(Exception):
+#    pass
 
 
-class SometimeError(Exception):
+#class SometimeError(Exception):
+#    pass
+
+
+class NumConstraintsError(Exception):
     pass
 
 
@@ -56,53 +59,51 @@ class GroundedConstraintsTask:
                                         pddl.constraints.ALWAYS: {NUM: 0, CONSTRAINTS: []},
                                         pddl.constraints.SOMETIME: {NUM: 0, CONSTRAINTS: []},
                                         pddl.constraints.SOMETIMEBEFORE: {NUM: 0, CONSTRAINTS: []},
-                                        pddl.constraints.SOMETIMEAFTER: {NUM: 0, CONSTRAINTS: []}}
+                                        pddl.constraints.SOMETIMEAFTER: {NUM: 0, CONSTRAINTS: []},
+                                        pddl.constraints.ALWAYSNEXT: {NUM: 0, CONSTRAINTS: []},
+                                        pddl.constraints.PATTERN: {NUM: 0, CONSTRAINTS: []}}
         self.init_ground_constraints()
         self.actions2constraints()
         self.complete_ground_constraints()
-        if VERBOSE:
-            self.print_ground_constraints_info()
         self.initial_state = [atom for atom in self.normalized_task.init if atom in ground_atoms]
         self.goal = self.fix_goal(self.normalized_task.goal)
         self.atoms = [atom for atom in self.total_atoms if atom.predicate not in self.constraints_action_list_dict
                       and atom.predicate not in self.axiom_list_dict]
         self.check_constraints()
+        self.delete_unnecessary_fluents()
 
-    def print_ground_constraints_info(self):
-        print("Always pre grounding --------------> {}".format(
-            self.normalized_task.hard_constraints_map[pddl.constraints.ALWAYS][NUM]))
-        print("Always post grounding -------------> {}".format(
-            self.ground_constraints_dict[pddl.constraints.ALWAYS][NUM]))
+    def delete_unnecessary_fluents(self):
+        real_atoms = []
+        action_predicates = [action.name for action in self.normalized_task.actions]
+        for atom in self.atoms:
+            if atom.predicate not in action_predicates:
+                real_atoms.append(atom)
+        self.atoms = real_atoms
 
-        print("Sometime pre grounding ------------> {}".format(
-            self.normalized_task.hard_constraints_map[pddl.constraints.SOMETIME][NUM]))
-        print("Sometime post grounding -----------> {}".format(
-            self.ground_constraints_dict[pddl.constraints.SOMETIME][NUM]))
-
-        print("Sometime-Before pre grounding -----> {}".format(
-            self.normalized_task.hard_constraints_map[pddl.constraints.SOMETIMEBEFORE][NUM]))
-        print("Sometime-Before post grounding ----> {}".format(
-            self.ground_constraints_dict[pddl.constraints.SOMETIMEBEFORE][NUM]))
-
-        print("Sometime-After pre grounding ------> {}".format(
-            self.normalized_task.hard_constraints_map[pddl.constraints.SOMETIMEAFTER][NUM]))
-        print("Sometime-After post grounding -----> {}".format(
-            self.ground_constraints_dict[pddl.constraints.SOMETIMEAFTER][NUM]))
-
-        print("At-Most-Once pre grounding --------> {}".format(
-            self.normalized_task.hard_constraints_map[pddl.constraints.ATMOSTONCE][NUM]))
-        print("At-Most-Once post grounding -------> {}".format(
-            self.ground_constraints_dict[pddl.constraints.ATMOSTONCE][NUM]))
+        for action in self.ground_actions:
+            #It should always be the last effect
+            (_, eff) = action.add_effects[len(action.add_effects)-1]
+            if eff.predicate in action_predicates:
+                action.add_effects.pop(len(action.add_effects)-1)
+            else:
+                to_pop = -1
+                for i in range(len(action.add_effects)):
+                    (_, eff) = action.add_effects[i]
+                    if eff.predicate in action_predicates:
+                        to_pop = i
+                action.add_effects.pop(to_pop)
 
     def check_constraints(self):
-        # Here i check that the i have the right number of always and
-        # sometime constraints
-        num_always = self.ground_constraints_dict[pddl.constraints.ALWAYS][NUM]
-        num_sometime = self.ground_constraints_dict[pddl.constraints.SOMETIME][NUM]
-        if num_always != self.normalized_task.hard_constraints_map[pddl.constraints.ALWAYS][NUM]:
-            raise AlwaysError('Problem not solvable! one or more always constraints are not satisfiable')
-        if num_sometime != self.normalized_task.hard_constraints_map[pddl.constraints.SOMETIME][NUM]:
-            raise SometimeError('Problem not solvable! one or more sometime constraints are not satisfiable')
+        # Here i check that the i have the right number of plan constraints
+        for key in self.ground_constraints_dict.keys():
+            if self.ground_constraints_dict[key][NUM] != self.normalized_task.hard_constraints_map[key][NUM]:
+                print('One or more {} constraints where removed because deemed not reachable by the planner'.format(key))
+                print('These are the actual {} constraints:')
+                if key == pddl.constraints.ALWAYS:
+                    print('I this case, only the empty plan is a valid solution')
+                    self.ground_constraints_dict[key][CONSTRAINTS].append(pddl.constraints.Always(pddl.conditions.Falsity()))
+                if key == pddl.constraints.SOMETIME:
+                    self.ground_constraints_dict[key][CONSTRAINTS].append(pddl.constraints.Sometime(pddl.conditions.Falsity()))
 
     def fix_goal(self, goal):
         if isinstance(goal, pddl.Literal):
@@ -245,11 +246,13 @@ class GroundedConstraintsTask:
 
     def init_ground_constraints(self):
         for kind in pddl.constraints.KINDS:
-            lifted_cation_constraints_list = self.normalized_task.hard_constraints_map[kind][CONSTRAINTS]
-            if kind == pddl.constraints.SOMETIMEBEFORE or kind == pddl.constraints.SOMETIMEAFTER:
-                self.manage_pair_gd(kind, lifted_cation_constraints_list)
+            lifted_action_constraints_list = self.normalized_task.hard_constraints_map[kind][CONSTRAINTS]
+            if pddl.constraints.isNary(kind):
+                self.manage_nary_gd(kind, lifted_action_constraints_list)
+            elif pddl.constraints.has2gd(kind):
+                self.manage_pair_gd(kind, lifted_action_constraints_list)
             else:
-                self.manage_single_gd(kind, lifted_cation_constraints_list)
+                self.manage_single_gd(kind, lifted_action_constraints_list)
 
     def manage_pair_gd(self, kind, lifted_axiom_constraints_list):
         for (phi_lifted, psi_lifted) in lifted_axiom_constraints_list:
@@ -281,6 +284,24 @@ class GroundedConstraintsTask:
                     # TODO maybe it's better to instantiate an object here
                     self.ground_constraints_dict[kind][CONSTRAINTS].append(phi_ground)
 
+    def manage_nary_gd(self, kind, lifted_action_constraints_list):
+        for tup in lifted_action_constraints_list:
+            tup_list = list(tup)
+            phi_1 = self.constraints_action_list_dict.get(tup_list[0], None)
+            if phi_1 is not None:
+                for phi_1_action in phi_1.keys():
+                    # I go from action name 2 atom
+                    _, atom_phi_1 = phi_1[phi_1_action][0].add_effects[0]
+                    other_atoms = [get_atom_key(atom_phi_1)]
+                    for other_phi in tup_list[1:]:
+                        other_phi_atom = pddl.Atom(other_phi, atom_phi_1.args)
+                        if other_phi_atom.predicate not in self.constraints_action_list_dict or \
+                                not get_atom_key(other_phi_atom) in self.constraints_action_list_dict[other_phi_atom.predicate]:
+                            other_atoms.append(pddl.conditions.Falsity())
+                        else:
+                            other_atoms.append(get_atom_key(other_phi_atom))
+                    self.ground_constraints_dict[kind][CONSTRAINTS].append(other_atoms)
+
     def remove_support_axiom(self, phi, psi):
         # I need to remove phi from psi axioms precondition
         psi_action_list = self.constraints_action_list_dict[psi.predicate][get_atom_key(psi)]
@@ -292,7 +313,19 @@ class GroundedConstraintsTask:
     def complete_ground_constraints(self):
         for kind in pddl.constraints.KINDS:
             ground_constraints = []
-            if pddl.constraints.has2gd(kind):
+            if pddl.constraints.isNary(kind):
+                for constr in self.ground_constraints_dict[kind][CONSTRAINTS]:
+                    if kind == pddl.constraints.PATTERN:
+                        formula_list = []
+                        for cond in constr:
+                            if isinstance(cond, pddl.conditions.Falsity):
+                                formula_list.append(cond)
+                            else:
+                                formula_list.append(self.action2formula_dict[cond])
+                        ground_constraints.append(pddl.constraints.Pattern(formula_list))
+                    else:
+                        raise Exception("Error! unknown constraint")
+            elif pddl.constraints.has2gd(kind):
                 for (phi, psi) in self.ground_constraints_dict[kind][CONSTRAINTS]:
                     gd1 = self.action2formula_dict[phi]
                     if psi is None:
@@ -301,8 +334,12 @@ class GroundedConstraintsTask:
                         gd2 = self.action2formula_dict[psi]
                     if kind == pddl.constraints.SOMETIMEBEFORE:
                         ground_constraints.append(pddl.constraints.SometimeBefore(gd1, gd2))
-                    else:
+                    elif kind == pddl.constraints.SOMETIMEAFTER:
                         ground_constraints.append(pddl.constraints.SometimeAfter(gd1, gd2))
+                    elif kind == pddl.constraints.ALWAYSNEXT:
+                        ground_constraints.append(pddl.constraints.AlwaysNext(gd1, gd2))
+                    else:
+                        raise Exception("Error! unknown constraint")
             else:
                 for phi in self.ground_constraints_dict[kind][CONSTRAINTS]:
                     gd = self.action2formula_dict[phi]
@@ -312,10 +349,12 @@ class GroundedConstraintsTask:
                         ground_constraints.append(pddl.constraints.Sometime(gd))
                     elif kind == pddl.constraints.ATMOSTONCE:
                         ground_constraints.append(pddl.constraints.AtMostOnce(gd))
-                    elif kind == pddl.constraints.ATEND:
-                        ground_constraints.append(pddl.constraints.AtEnd(gd))
+                    else:
+                        raise Exception("Error! unknown constraint")
             self.ground_constraints_dict[kind][CONSTRAINTS] = ground_constraints
             self.ground_constraints_dict[kind][NUM] = len(ground_constraints)
+
+
 
 
 def get_num_instantiations(type_to_objects, parameters):
@@ -350,7 +389,9 @@ class ConstraintsNormalizer:
                                      pddl.constraints.ALWAYS: {NUM: 0, CONSTRAINTS: []},
                                      pddl.constraints.SOMETIME: {NUM: 0, CONSTRAINTS: []},
                                      pddl.constraints.SOMETIMEBEFORE: {NUM: 0, CONSTRAINTS: []},
-                                     pddl.constraints.SOMETIMEAFTER: {NUM: 0, CONSTRAINTS: []}}
+                                     pddl.constraints.SOMETIMEAFTER: {NUM: 0, CONSTRAINTS: []},
+                                     pddl.constraints.ALWAYSNEXT: {NUM: 0, CONSTRAINTS: []},
+                                     pddl.constraints.PATTERN: {NUM: 0, CONSTRAINTS: []}}
         self.objects = objects
         self.types = types
         self.constraint_list = []
@@ -359,8 +400,6 @@ class ConstraintsNormalizer:
         if constraints_formula is not None and not isinstance(constraints_formula, pddl.Truth):
             self.normalize(constraints_formula, ())
             # TODO should i re-uniquify the parameters?
-            if SPLIT_ALWAYS:
-                self.split_always()
             self.constraints2actions()
 
     def normalize(self, constraints_formula, parameters):
@@ -372,6 +411,8 @@ class ConstraintsNormalizer:
                 self.check_disjoint_paramters(parameters, constraints_formula.parameters)
             self.normalize(constraints_formula.parts[0], parameters + constraints_formula.parameters)
         elif isinstance(constraints_formula, pddl.constraints.HardConstraint):
+            self.store(constraints_formula, parameters)
+        elif isinstance(constraints_formula, pddl.constraints.NaryConstraint):
             self.store(constraints_formula, parameters)
         else:
             raise Exception("Constraints Normalization Error. Check the (:constraints field")
@@ -401,13 +442,21 @@ class ConstraintsNormalizer:
                 kind = constraint.kind
                 parameters = ()
                 self.hard_constraints_map[kind][NUM] += 1
-            phi_atom = self.constraint2action(parameters, constraint.gd1)
-            if pddl.constraints.has2gd(kind):
-                psi_precondition = pddl.Conjunction([constraint.gd2, phi_atom]).simplified()
-                psi_atom = self.constraint2action(parameters, psi_precondition)
-                self.hard_constraints_map[kind][CONSTRAINTS].append((phi_atom.predicate, psi_atom.predicate))
+            if pddl.constraints.isNary(kind):
+                atoms = []
+                for condition in constraint.gd1:
+                    atoms.append(self.constraint2action(parameters, condition))
+                self.hard_constraints_map[kind][CONSTRAINTS].append(tuple([atom.predicate for atom in atoms]))
             else:
-                self.hard_constraints_map[kind][CONSTRAINTS].append(phi_atom.predicate)
+                ######################## UNARY OR BINARY CONSTRAINTS ###################################################
+                phi_atom = self.constraint2action(parameters, constraint.gd1)
+                if pddl.constraints.has2gd(kind):
+                    psi_precondition = pddl.Conjunction([constraint.gd2, phi_atom]).simplified()
+                    psi_atom = self.constraint2action(parameters, psi_precondition)
+                    self.hard_constraints_map[kind][CONSTRAINTS].append((phi_atom.predicate, psi_atom.predicate))
+                else:
+                    self.hard_constraints_map[kind][CONSTRAINTS].append(phi_atom.predicate)
+                ########################################################################################################
 
     def constraint2action(self, parameters, preconditions):
         atom_predicate = NEW_ATOM_TEMPLATE.format(self.new_action_counter)
@@ -419,15 +468,3 @@ class ConstraintsNormalizer:
         self.new_action_counter += 1
         self.new_actions.append(action)
         return atom
-
-    def split_always(self):
-        new_constraints_list = []
-        for c in self.constraint_list:
-            if isinstance(c, pddl.Always):
-                if isinstance(c.gd1, pddl.Conjunction):
-                    new_constraints_list = new_constraints_list + [pddl.Always(part) for part in c.gd1.parts]
-                else:
-                    new_constraints_list.append(c)
-            else:
-                new_constraints_list.append(c)
-        self.constraint_list = new_constraints_list

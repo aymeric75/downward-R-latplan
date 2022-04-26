@@ -5,7 +5,7 @@ import copy
 from . import pddl
 
 '''NEW'''
-from . import hard_constraints_manager
+from . import plan_constraints_manager
 '''NEW'''
 
 class ConditionProxy:
@@ -330,7 +330,7 @@ def substitute_complicated_goal(task):
 
 def normalize(task):
     '''NEW'''
-    hard_constraints_manager.hard_constraints_preprocessing(task)
+    plan_constraints_manager.hard_constraints_preprocessing(task)
     '''NEW'''
     remove_universal_quantifiers(task)
     substitute_complicated_goal(task)

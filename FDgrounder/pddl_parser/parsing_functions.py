@@ -105,8 +105,7 @@ def parse_constraints(alist, type_dict, predicate_dict):
 def parse_constraints_aux(alist, type_dict, predicate_dict):
     """Parse a PDDL constraint"""
     tag = alist[0]
-    #TODO constraint AT END
-    assert tag in ("and", "forall", "always", "at-most-once", "sometime", "sometime-before", "sometime-after")
+    assert tag in ("and", "forall", "always", "at-most-once", "sometime", "sometime-before", "sometime-after", "always-next", "pattern")
     if tag == "and":
         args = alist[1:]
     elif tag == "forall":
@@ -133,6 +132,15 @@ def parse_constraints_aux(alist, type_dict, predicate_dict):
             assert len(args) == 2
             condition2 = parse_condition_aux(args[1], False, type_dict, predicate_dict)
             return pddl.SometimeAfter(condition, condition2)
+        elif tag == "always-next":
+            assert len(args) == 2
+            condition2 = parse_condition_aux(args[1], False, type_dict, predicate_dict)
+            return pddl.AlwaysNext(condition, condition2)
+        elif tag == "pattern":
+            condition_list = []
+            for arg in args:
+                condition_list.append(parse_condition_aux(arg, False, type_dict, predicate_dict))
+            return pddl.Pattern(condition_list)
 
     parts = [parse_constraints_aux(part, type_dict, predicate_dict) for part in args]
 
@@ -337,9 +345,24 @@ def parse_axiom(alist, type_dict, predicate_dict):
                       len(predicate.arguments), condition)
 
 
+def extend_predicates_for_plan_constraints(actions, predicates, predicate_dict):
+    for a in actions:
+        new_predicate = pddl.predicates.Predicate(name=a.name, arguments=a.parameters)
+        predicate_dict[new_predicate.name] = new_predicate
+        predicates.append(new_predicate)
+        atom_arguments = tuple([x.name for x in new_predicate.arguments])
+        new_effect = pddl.effects.Effect(condition=pddl.conditions.Truth(),
+                                         parameters=[],
+                                         literal=pddl.Atom(predicate=new_predicate.name, args=atom_arguments))
+        a.effects.append(new_effect)
+
+
 def parse_task(domain_pddl, task_pddl):
     domain_name, domain_requirements, types, type_dict, constants, predicates, predicate_dict, functions, actions, axioms \
                  = parse_domain_pddl(domain_pddl)
+
+    extend_predicates_for_plan_constraints(actions, predicates, predicate_dict)
+
     task_name, task_domain_name, task_requirements, objects, init, goal, constraints, use_metric = parse_task_pddl(task_pddl, type_dict, predicate_dict)
 
     assert domain_name == task_domain_name
@@ -512,6 +535,7 @@ def parse_task_pddl(task_pddl, type_dict, predicate_dict):
     constraints = None
     use_metric = False
     for entry in iterator:
+        #if entry[0] == ":plan-constraints":
         if entry[0] == ":constraints":
             assert len(entry) == 2
             to_parse = entry[1]

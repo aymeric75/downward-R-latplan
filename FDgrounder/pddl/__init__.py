@@ -42,3 +42,5 @@ from .constraints import AtMostOnce
 from .constraints import Sometime
 from .constraints import SometimeAfter
 from .constraints import SometimeBefore
+from .constraints import AlwaysNext
+from .constraints import Pattern
