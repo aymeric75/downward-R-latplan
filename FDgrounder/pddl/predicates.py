@@ -6,5 +6,8 @@ class Predicate:
     def __str__(self):
         return "%s(%s)" % (self.name, ", ".join(map(str, self.arguments)))
 
+    def to_pddl(self):
+        return "(%s %s)" % (self.name, " ".join(arg.to_pddl() for arg in self.arguments))
+
     def get_arity(self):
         return len(self.arguments)

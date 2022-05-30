@@ -57,6 +57,23 @@ class Task:
             print("Axioms:")
             for axiom in self.axioms:
                 axiom.dump()
+    
+    def dump_domain_pddl(self):
+        header = '(define (domain {domain_name})\n{domain_body})'
+        requirements = '(:requirements :adl)\n'
+        predicates_str = '(:predicates \n{})\n'
+        actions = ''
+        predicates = ''
+        for predicate in self.predicates:
+            if predicate.name != '=':
+                predicates += '\t{}\n'.format(predicate.to_pddl())
+        for action in self.actions:
+            actions += '{}\n\n'.format(action.to_pddl())
+        domain_body = requirements + predicates_str.format(predicates) + actions
+        domain_str = header.format(domain_name='pddl-domain',
+                                   domain_body=domain_body)
+        return domain_str
+
 
 class Requirements:
     def __init__(self, requirements):

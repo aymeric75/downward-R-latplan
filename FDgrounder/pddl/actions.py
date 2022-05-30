@@ -36,6 +36,27 @@ class Action:
         else:
             print("  None")
 
+    def to_pddl(self):
+        action_str = '(:action {name}\n' \
+                     ':parameters ({parameters})\n' \
+                     ':precondition {preconditions}\n' \
+                     ':effect (and {effects}))'
+        eff_str = ''
+        for eff in self.effects:
+            eff_str += ' ' + eff.to_pddl()
+
+
+        precondition_str = ''
+        if isinstance(self.precondition, conditions.Truth):
+            precondition_str ='(and )'
+        else:
+            precondition_str =self.precondition.to_pddl()
+
+        return action_str.format(name=self.name,
+                                 parameters=' '.join(param.to_pddl() for param in self.parameters), 
+                                 preconditions=precondition_str, 
+                                 effects=eff_str)
+
     def uniquify_variables(self):
         self.type_map = {par.name: par.type_name for par in self.parameters}
         self.precondition = self.precondition.uniquify_variables(self.type_map)

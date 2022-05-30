@@ -52,6 +52,9 @@ class TypedObject:
     def __repr__(self):
         return "<TypedObject %s: %s>" % (self.name, self.type_name)
 
+    def to_pddl(self):
+        return f'{self.name} - {self.type_name}'
+
     def uniquify_name(self, type_map, renamings):
         if self.name not in type_map:
             type_map[self.name] = self.type_name
