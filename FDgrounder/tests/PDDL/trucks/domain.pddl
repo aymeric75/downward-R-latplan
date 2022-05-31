@@ -2,7 +2,7 @@
 ; Authors: Yannis Dimopoulos, Alfonso Gerevini and Alessandro Saetti 
 
 (define (domain Trucks) 
-(:requirements :typing :adl)  
+(:requirements :typing :adl :derived-predicates)  
 
 (:types truckarea time location locatable - object
         truck package - locatable) 
@@ -16,7 +16,12 @@
 	     (le ?t1 - time ?t2 - time)
  	     (delivered ?p - package ?l - location ?t - time)
 	     (at-destination ?p - package ?l - location)
- 	     (closer ?a1 - truckarea ?a2 - truckarea))
+ 	     (closer ?a1 - truckarea ?a2 - truckarea)
+		 (new_predicate ?l - location)
+		 )
+
+(:constants la - location
+			pa - package)
 
 (:action load
  :parameters (?p - package ?t - truck ?a1 - truckarea ?l - location)
@@ -53,6 +58,10 @@
  :parameters (?p - package ?l1 - location)
  :precondition (and )
  :effect (and (when (at ?p ?l1) (forall (?l2 - location) (at ?p ?l2)))))
+
+ (:derived (new_predicate ?l) 
+	(or (exists (?t - truck) (at ?t ?l)) (forall (?p - package) (at ?p ?l)))
+ )
 
 )
 

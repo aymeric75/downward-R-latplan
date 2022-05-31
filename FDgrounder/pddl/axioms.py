@@ -40,6 +40,11 @@ class Axiom:
         effect = conditions.Atom(self.name, effect_args)
         return PropositionalAxiom(name, condition, effect)
 
+    def to_pddl(self):
+        head = f'({self.name} {" ".join([p.to_pddl() for p in self.parameters])})'
+        body = self.condition.to_pddl()
+        return f'(:derived {head}\n\t{body})'
+
 
 class PropositionalAxiom:
     def __init__(self, name, condition, effect):

@@ -1,5 +1,6 @@
 from . import axioms
 from . import predicates
+from . import conditions
 
 
 class Task:
@@ -58,21 +59,57 @@ class Task:
             for axiom in self.axioms:
                 axiom.dump()
     
-    def dump_domain_pddl(self):
+    '''
+    Returns a string with the domain of the task in PDDL
+    '''
+    def get_pddl_domain(self):
         header = '(define (domain {domain_name})\n{domain_body})'
         requirements = '(:requirements :adl)\n'
         predicates_str = '(:predicates \n{})\n'
         actions = ''
         predicates = ''
+        axioms = ''
+        for axiom in self.axioms:
+            axioms += f'{axiom.to_pddl()}\n\n'
         for predicate in self.predicates:
             if predicate.name != '=':
                 predicates += '\t{}\n'.format(predicate.to_pddl())
         for action in self.actions:
             actions += '{}\n\n'.format(action.to_pddl())
-        domain_body = requirements + predicates_str.format(predicates) + actions
+        domain_body = requirements + predicates_str.format(predicates) + axioms + actions
         domain_str = header.format(domain_name='pddl-domain',
                                    domain_body=domain_body)
         return domain_str
+    
+    '''
+    Returns a string with the problem of the task in PDDL
+    '''
+    def get_pddl_problem(self):
+        header = '(define (problem {problem_name})\n(:domain {domain_name})\n{problem_body})'
+
+        objects_field = '(:objects \n{})\n'
+
+        obj_str = ''
+        for obj in self.objects:
+            obj_str += '\t{}\n'.format(obj.to_pddl())
+
+        init_facts = '(:init \n{})\n'
+
+        if isinstance(self.goal, conditions.Truth):
+            goal = '(:goal (and ))\n'
+        else:
+            goal = '(:goal {})\n'.format(self.goal.to_pddl())
+
+        init = ''
+        init_list = list(self.init)
+        for atom in sorted(init_list):
+            if atom.predicate != '=':
+                init += '\t{}\n'.format(atom.to_pddl())
+        problem_body = objects_field.format(obj_str) + init_facts.format(init) + goal
+        problem_str = header.format(problem_name='pddl-problem',
+                                    domain_name='pddl-domain',
+                                    problem_body=problem_body)
+        return problem_str
 
 
 class Requirements:
