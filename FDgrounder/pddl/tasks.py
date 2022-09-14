@@ -77,7 +77,11 @@ class Task:
         for action in self.actions:
             actions += '{}\n\n'.format(action.to_pddl())
         domain_body = requirements + predicates_str.format(predicates) + axioms + actions
-        domain_str = header.format(domain_name='pddl-domain',
+        if self.domain_name != '':
+            domain_name = self.domain_name
+        else:
+            domain_name = 'pddl-domain'
+        domain_str = header.format(domain_name=domain_name,
                                    domain_body=domain_body)
         return domain_str
     
@@ -106,9 +110,18 @@ class Task:
             if atom.predicate != '=':
                 init += '\t{}\n'.format(atom.to_pddl())
         problem_body = objects_field.format(obj_str) + init_facts.format(init) + goal
-        problem_str = header.format(problem_name='pddl-problem',
-                                    domain_name='pddl-domain',
+        if self.domain_name != '':
+            domain_name = self.domain_name
+        else:
+            domain_name = 'pddl-domain'
+
+        if self.hard_constraints is not None:
+            problem_body += f'(:constraints {self.hard_constraints.to_pddl()})'
+            
+        problem_str = header.format(problem_name=self.task_name,
+                                    domain_name=domain_name,
                                     problem_body=problem_body)
+        
         return problem_str
 
 

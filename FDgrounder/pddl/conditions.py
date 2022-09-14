@@ -137,6 +137,9 @@ class Conjunction(JunctorCondition):
 
     def to_pddl(self):
         return f'(and {" ".join([part.to_pddl() for part in self.parts])})'
+    
+    def __repr__(self) -> str:
+        return f'AND ({" ".join([part.__repr__() for part in self.parts])})'
 
 class Disjunction(JunctorCondition):
     def _simplified(self, parts):
@@ -160,6 +163,9 @@ class Disjunction(JunctorCondition):
 
     def to_pddl(self):
         return f'(or {" ".join([part.to_pddl() for part in self.parts])})'
+    
+    def __repr__(self) -> str:
+        return f'OR ({" ".join([part.__repr__() for part in self.parts])})'
 
 class QuantifiedCondition(Condition):
     # Defining __eq__ blocks inheritance of __hash__, so must set it explicitly.
@@ -207,8 +213,12 @@ class UniversalCondition(QuantifiedCondition):
         return ExistentialCondition(self.parameters, [p.negate() for p in self.parts])
     def has_universal_part(self):
         return True
+
     def to_pddl(self):
         return f"(forall ({' '.join(param.to_pddl() for param in self.parameters)}) {' '.join(part.to_pddl() for part in self.parts)})"
+    
+    def __repr__(self) -> str:
+        return f"FORALL [{' '.join(param.to_pddl() for param in self.parameters)}] {' '.join(part.__repr__() for part in self.parts)}"
 
 class ExistentialCondition(QuantifiedCondition):
     def _untyped(self, parts):
@@ -224,6 +234,9 @@ class ExistentialCondition(QuantifiedCondition):
         return True
     def to_pddl(self):
         return f"(exists ({' '.join(param.to_pddl() for param in self.parameters)}) {' '.join(part.to_pddl() for part in self.parts)})"
+
+    def __repr__(self) -> str:
+        return f"EXISTS [{' '.join(param.to_pddl() for param in self.parameters)}] {' '.join(part.__repr__() for part in self.parts)}"
 
 class Literal(Condition):
     # Defining __eq__ blocks inheritance of __hash__, so must set it explicitly.
@@ -287,6 +300,8 @@ class Atom(Literal):
         return self
     def to_pddl(self):
         return "(%s %s)" % (self.predicate, " ".join(map(str, self.args)))
+    def __repr__(self):
+        return self.to_pddl()
 
 class NegatedAtom(Literal):
     negated = True
@@ -304,3 +319,5 @@ class NegatedAtom(Literal):
     positive = negate
     def to_pddl(self):
         return "(not (%s %s))" % (self.predicate, " ".join(map(str, self.args)))
+    def __repr__(self):
+        return self.to_pddl()

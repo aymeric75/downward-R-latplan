@@ -36,6 +36,12 @@ class HardConstraint:
     def set_monitoring_atom_predicate(self, predicate):
         self.monitoring_atom = predicate
 
+    def to_pddl(self):
+        return '(%s %s)' % (self.kind, self.gd1.to_pddl())
+    
+    def __repr__(self) -> str:
+        return '%s (%s)' % (self.kind, self.gd1.__repr__())
+
 class Always(HardConstraint):
     def __init__(self, condition):
         super().__init__(condition, ALWAYS)
@@ -72,6 +78,12 @@ class SometimeBefore(HardConstraint):
 
     def __hash__(self):
         return self.hash
+    
+    def to_pddl(self):
+        return '(%s %s %s)' % (self.kind, self.gd1.to_pddl(), self.gd2.to_pddl())
+    
+    def __repr__(self) -> str:
+        return '%s (%s) (%s)' % (self.kind, self.gd1.__repr__(), self.gd2.__repr__())
 
 
 class SometimeAfter(HardConstraint):
@@ -95,3 +107,9 @@ class SometimeAfter(HardConstraint):
 
     def __hash__(self):
         return self.hash
+    
+    def to_pddl(self):
+        return '(%s %s %s)' % (self.kind, self.gd1.to_pddl(), self.gd2.to_pddl())
+    
+    def __repr__(self) -> str:
+        return '%s (%s) (%s)' % (self.kind, self.gd1.__repr__(), self.gd2.__repr__())
