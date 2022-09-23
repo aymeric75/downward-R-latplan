@@ -71,15 +71,25 @@ class Effect:
     def simplified(self):
         return Effect(self.parameters, self.condition.simplified(), self.literal)
 
+    # def to_pddl(self):
+    #     if self.parameters == []:
+    #         eff = self.literal.to_pddl()
+    #     else:
+    #         eff = f'(forall ({" ".join(param.to_pddl() for param in self.parameters)}) {self.literal.to_pddl()})'
+    #     if isinstance(self.condition, conditions.Truth):
+    #         return eff
+    #     else:
+    #         return f'(when {self.condition.to_pddl()} {eff})'
+    
     def to_pddl(self):
-        if self.parameters == []:
+        if isinstance(self.condition, conditions.Truth):
             eff = self.literal.to_pddl()
         else:
-            eff = f'(forall ({" ".join(param.to_pddl() for param in self.parameters)}) {self.literal.to_pddl()})'
-        if isinstance(self.condition, conditions.Truth):
-            return eff
+            eff = f'(when {self.condition.to_pddl()} {self.literal.to_pddl()})'
+        if self.parameters:
+            return f'(forall ({" ".join(param.to_pddl() for param in self.parameters)}) {eff})'
         else:
-            return f'(when {self.condition.to_pddl()} {eff})'
+            return eff
 
 class ConditionalEffect:
     def __init__(self, condition, effect):

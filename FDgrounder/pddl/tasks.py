@@ -76,7 +76,12 @@ class Task:
                 predicates += '\t{}\n'.format(predicate.to_pddl())
         for action in self.actions:
             actions += '{}\n\n'.format(action.to_pddl())
-        domain_body = requirements + predicates_str.format(predicates) + axioms + actions
+        domain_types = ''
+        for t in self.types:
+            if t.basetype_name is not None:
+                domain_types += f"\t{t.name} - {t.basetype_name}\n"
+        domain_types = '(:types\n' + domain_types + ')\n'
+        domain_body = requirements + domain_types + predicates_str.format(predicates) + axioms + actions
         if self.domain_name != '':
             domain_name = self.domain_name
         else:
