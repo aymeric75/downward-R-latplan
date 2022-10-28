@@ -64,7 +64,13 @@ class Task:
     '''
     def get_pddl_domain(self):
         header = '(define (domain {domain_name})\n{domain_body})'
-        requirements = '(:requirements :adl)\n'
+        if self.requirements:
+            tmp_string = ""
+            for re in self.requirements:
+                tmp_string += re+" "
+            requirements = '(:requirements '+tmp_string+')\n'
+        else:
+            requirements = '(:requirements :adl)\n'
         predicates_str = '(:predicates \n{})\n'
         actions = ''
         predicates = ''
