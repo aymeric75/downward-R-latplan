@@ -38,9 +38,9 @@ class Action:
 
     def to_pddl(self):
         action_str = '(:action {name}\n' \
-                     ':parameters ({parameters})\n' \
-                     ':precondition {preconditions}\n' \
-                     ':effect (and {effects}))'
+                     '\t :parameters ({parameters})\n' \
+                     '\t :precondition {preconditions}\n' \
+                     '\t :effect (and {effects}))'
         eff_str = ''
         for eff in self.effects:
             eff_str += ' ' + eff.to_pddl()
