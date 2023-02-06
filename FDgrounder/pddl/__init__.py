@@ -35,10 +35,3 @@ from .f_expression import Assign
 from .f_expression import Increase
 from .f_expression import NumericConstant
 from .f_expression import PrimitiveNumericExpression
-
-'''NEW'''
-from .constraints import Always
-from .constraints import AtMostOnce
-from .constraints import Sometime
-from .constraints import SometimeAfter
-from .constraints import SometimeBefore

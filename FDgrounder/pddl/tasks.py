@@ -5,7 +5,7 @@ from . import predicates
 class Task:
     def __init__(self, domain_name, task_name, requirements,
                  types, objects, predicates, functions, init, goal,
-                 actions, axioms, use_metric, hard_constraints=None):
+                 actions, axioms, use_metric):
         self.domain_name = domain_name
         self.task_name = task_name
         self.requirements = requirements
@@ -19,8 +19,6 @@ class Task:
         self.axioms = axioms
         self.axiom_counter = 0
         self.use_min_cost_metric = use_metric
-        self.hard_constraints = hard_constraints
-        self.hard_constraints_map = {}
 
     def add_axiom(self, parameters, condition):
         name = "new-axiom@%d" % self.axiom_counter
@@ -67,6 +65,6 @@ class Requirements:
               ":negative-preconditions", ":disjunctive-preconditions",
               ":existential-preconditions", ":universal-preconditions",
               ":quantified-preconditions", ":conditional-effects",
-              ":derived-predicates", ":action-costs", ":preferences", ":constraints"), req
+              ":derived-predicates", ":action-costs"), req
     def __str__(self):
         return ", ".join(self.requirements)

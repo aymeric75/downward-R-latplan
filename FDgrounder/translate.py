@@ -16,22 +16,19 @@ from collections import defaultdict
 from copy import deepcopy
 from itertools import product
 
-import axiom_rules
-import fact_groups
-import instantiate
-import normalize
-import options
-import pddl
-import pddl_parser
-import sas_tasks
+from . import axiom_rules
+from . import fact_groups
+from . import instantiate
+from . import normalize
+from . import options
+from . import pddl
+from . import pddl_parser
+from . import sas_tasks
 import signal
-import simplify
-import timers
-import tools
-import variable_order
-
-'''NEW'''
-import hard_constraints_extension_action_ver
+from . import simplify
+from . import timers
+from . import tools
+from . import variable_order
 
 # TODO: The translator may generate trivial derived variables which are always
 # true, for example if there ia a derived predicate in the input that only
@@ -105,7 +102,7 @@ def translate_strips_conditions_aux(conditions, dictionary, ranges):
             ## and conditions like (not (occupied ?x)) do occur in
             ## preconditions.
             ## However, here we avoid introducing new derived predicates
-            ## by treat the negative precondition as a disjunctive
+            ## by treating the negative precondition as a disjunctive
             ## precondition and expanding it by "multiplying out" the
             ## possibilities.  This can lead to an exponential blow-up so
             ## it would be nice to choose the behaviour as an option.
@@ -361,7 +358,6 @@ def prune_stupid_effect_conditions(var, val, conditions, effects_on_var):
     for condition in conditions:
         # Apply rule 1.
         while dual_fact in condition:
-            # print "*** Removing dual condition"
             simplified = True
             condition.remove(dual_fact)
         # Apply rule 2.
@@ -525,17 +521,14 @@ def unsolvable_sas_task(msg):
 
 def pddl_to_sas(task):
     with timers.timing("Instantiating", block=True):
-        (relaxed_reachable, atoms, actions, axioms,
+        (relaxed_reachable, atoms, actions, goal_list, axioms,
          reachable_action_params) = instantiate.explore(task)
 
     if not relaxed_reachable:
         return unsolvable_sas_task("No relaxed solution")
+    elif goal_list is None:
+        return unsolvable_sas_task("Trivially false goal")
 
-    # HACK! Goals should be treated differently.
-    if isinstance(task.goal, pddl.Conjunction):
-        goal_list = task.goal.parts
-    else:
-        goal_list = [task.goal]
     for item in goal_list:
         assert isinstance(item, pddl.Literal)
 
@@ -681,37 +674,6 @@ def dump_statistics(sas_task):
     else:
         print("Translator peak memory: %d KB" % peak_memory)
 
-def instantiate_dump(task):
-    with timers.timing("Instantiating", block=True):
-        (relaxed_reachable, atoms, actions, axioms,
-         reachable_action_params) = instantiate.explore(task)
-        #hard_constraints_extension.remove_all_axioms(task, atoms, actions, axioms)
-        print("goal relaxed reachable: %s" % relaxed_reachable)
-        print("%d atoms:" % len(atoms))
-        for atom in atoms:
-            print(" ", atom)
-        print()
-        print("%d actions:" % len(actions))
-        for action in actions:
-            action.dump()
-            print()   
-        print("%d axioms:" % len(axioms))
-        for axiom in axioms:
-            axiom.dump()
-            print()
-
-
-def instantiate_hard_constr(task):
-    (relaxed_reachable, atoms, actions, axioms,
-     reachable_action_params) = instantiate.explore(task)
-    groundedConstraintsTask = hard_constraints_extension_action_ver.GroundedConstraintsTask(task, atoms, actions, axioms)
-    domain_str = groundedConstraintsTask.domain2str()
-    problem_str = groundedConstraintsTask.problem2str()
-    with open('../test/output/compiled_dom.pddl', 'w') as out_dom:
-        out_dom.write(domain_str)
-    with open('../test/output/compiled_prob.pddl', 'w') as out_prob:
-        out_prob.write(problem_str)
-
 
 def main():
     timer = timers.Timer()
@@ -729,8 +691,12 @@ def main():
                 if effect.literal.negated:
                     del action.effects[index]
 
-    #instantiate_dump(task)
-    instantiate_hard_constr(task)
+    sas_task = pddl_to_sas(task)
+    dump_statistics(sas_task)
+
+    with timers.timing("Writing output"):
+        with open(options.sas_file, "w") as output_file:
+            sas_task.output(output_file)
     print("Done! %s" % timer)
 
 
