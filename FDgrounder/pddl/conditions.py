@@ -88,6 +88,8 @@ class Falsity(ConstantCondition):
         raise Impossible()
     def negate(self):
         return Truth()
+    def __repr__(self) -> str:
+        return "FALSE"
 
 class Truth(ConstantCondition):
     def to_untyped_strips(self):
@@ -96,6 +98,8 @@ class Truth(ConstantCondition):
         pass
     def negate(self):
         return Falsity()
+    def __repr__(self) -> str:
+        return "TRUE"
 
 class JunctorCondition(Condition):
     # Defining __eq__ blocks inheritance of __hash__, so must set it explicitly.
