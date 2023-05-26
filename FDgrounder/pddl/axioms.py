@@ -40,6 +40,9 @@ class Axiom:
         effect = conditions.Atom(self.name, effect_args)
         return PropositionalAxiom(name, condition, effect)
 
+    def __repr__(self) -> str:
+        return '<Axiom %s(%s) <- %s>' % (self.name, " ".join([str(p) for p in self.parameters]), self.condition)
+
 
 class PropositionalAxiom:
     def __init__(self, name, condition, effect):
@@ -72,5 +75,5 @@ class PropositionalAxiom:
         return self.key == other.key
 
     def __repr__(self):
-        return '<PropositionalAxiom %s %s -> %s>' % (
-            self.name, self.condition, self.effect)
+        return '<PropAxiom [%s] %s <- %s>' % (
+            self.name, self.effect, self.condition)
