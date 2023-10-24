@@ -65,6 +65,9 @@ class PropositionalAxiom:
     def key(self):
         return (self.name, self.condition, self.effect)
 
+    def __hash__(self) -> int:
+        return hash((self.name, tuple(self.condition), self.effect))
+
     def __lt__(self, other):
         return self.key < other.key
 
