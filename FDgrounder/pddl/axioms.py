@@ -78,5 +78,5 @@ class PropositionalAxiom:
         return self.key == other.key
 
     def __repr__(self):
-        return '<PropAxiom [%s] %s <- %s>' % (
-            self.name, self.effect, self.condition)
+        return 'Derived %s: %s' % (
+            self.name, self.condition)
